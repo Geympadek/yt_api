@@ -16,6 +16,9 @@ song_count = 0
 mutex = Lock()
 
 def soft_clear():
+    """
+    Cleares the temp directory, ignoring errors
+    """
     for file in os.listdir(TMP_DIR):
         path = os.path.join(TMP_DIR, file)
         try:
@@ -37,7 +40,7 @@ def load_audio(url: str) -> str:
         song_count += 1
         filename = str(song_count) + ".m4a"
 
-    ys.download(output_path=TMP_DIR, filename=filename, max_retries=5)
+    ys.download(output_path=TMP_DIR, filename=filename, timeout=5, max_retries=5)
 
     path = os.path.join(TMP_DIR, filename)
     audio: mutagen.easymp4.EasyMP4 = mutagen.File(path, easy=True)
