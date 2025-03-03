@@ -40,11 +40,12 @@ def load_audio(url: str) -> str:
         song_count += 1
         filename = str(song_count) + ".m4a"
 
+    path = os.path.join(TMP_DIR, filename)
+
     ys.download(output_path=TMP_DIR, filename=filename, timeout=5, max_retries=3)
-    if not os.path.exists(filename):
+    if not os.path.exists(path):
         raise Exception("Unable to fetch the song from yt")
 
-    path = os.path.join(TMP_DIR, filename)
     audio: mutagen.easymp4.EasyMP4 = mutagen.File(path, easy=True)
     
     if audio is not None:
