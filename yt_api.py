@@ -42,6 +42,9 @@ def edit_cover(original: bytes):
     img_cropped.save(output, format='JPEG')
     return output.getvalue()
 
+def format_author(raw: str):
+    return raw.replace(" - Topic", "")
+
 def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
     """
     Takes youtube `url` as input and returns the name of downloaded file.
@@ -81,7 +84,7 @@ def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
     audio = mp4.MP4(path)
     
     audio['\xa9nam'] = yt.title  # or use a custom title
-    audio['\xa9ART'] = yt.author  # or use a custom artist
+    audio['\xa9ART'] = format_author(yt.author) # or use a custom artist
 
     cover = requests.get(yt.thumbnail_url)
     cropped_cover = edit_cover(cover.content)
@@ -112,7 +115,7 @@ def search(query: str, limit: int = 8) -> list[dict]:
     results = []
     for video in videos[:limit]:
         results.append({
-            "author": video.author,
+            "author": format_author(video.author),
             "title": video.title,
             "url": video.watch_url
         })
