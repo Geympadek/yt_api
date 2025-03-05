@@ -41,7 +41,7 @@ def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
     
     attempt = 0
     while True:
-        yt = YouTube(url, client="WEB")
+        yt = YouTube(url)
         ys = yt.streams.get_audio_only()
 
         start_time = time()
