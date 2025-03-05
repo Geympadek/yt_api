@@ -41,23 +41,23 @@ def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
     
     attempt = 0
     while True:
-        yt = YouTube(url)
+        yt = YouTube(url, client="WEB")
         ys = yt.streams.get_audio_only()
 
         start_time = time()
         interrupted = False
-        def timeout_checker():
-            nonlocal interrupted
-            interrupted = time() - start_time > timeout
-            return interrupted
 
-        ys.download(output_path=TMP_DIR, filename=filename, interrupt_checker=timeout_checker)
+        try:
+            ys.download(output_path=TMP_DIR, filename=filename, timeout=timeout)
+        except Exception:
+            interrupted = True
+            print("Error raised")
+
         if interrupted:
-            print("Fetch took too long.")
             attempt += 1
             if attempt >= max_retries:
                 raise Exception("Exceeded number of retries.")
-            print(f"Starting {attempt}th retry.")
+            print(f"Starting {attempt} retry.")
             continue
 
         if not os.path.exists(path):
