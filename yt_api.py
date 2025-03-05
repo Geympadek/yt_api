@@ -2,14 +2,13 @@ TMP_DIR = "temp"
 
 import flask
 from flask import Flask, request
-import mutagen.easymp4
-import mutagen.m4a
-import mutagen.mp4
+from io import BytesIO
 from pytubefix import YouTube, Search
 import os
 from threading import Lock
-import mutagen
-from time import time
+from mutagen import mp4
+from PIL import Image
+import requests
 
 app = Flask("yt_api")
 
@@ -26,6 +25,22 @@ def soft_clear():
             os.remove(path)
         except:
             pass
+
+def edit_cover(original: bytes):
+    img = Image.open(BytesIO(original))
+    
+    CROP_SIZE = 355
+
+    width, height = img.size
+    left = (width - CROP_SIZE) // 2
+    top = (height - CROP_SIZE) // 2
+    right = (width + CROP_SIZE) // 2
+    bottom = (height + CROP_SIZE) // 2
+
+    img_cropped = img.crop((left, top, right, bottom))
+    output = BytesIO()
+    img_cropped.save(output, format='JPEG')
+    return output.getvalue()
 
 def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
     """
@@ -44,7 +59,6 @@ def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
         yt = YouTube(url)
         ys = yt.streams.get_audio_only()
 
-        start_time = time()
         interrupted = False
 
         try:
@@ -64,13 +78,16 @@ def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
             raise Exception("Unable to fetch the song from yt")
         break
 
-    audio: mutagen.easymp4.EasyMP4 = mutagen.File(path, easy=True)
+    audio = mp4.MP4(path)
     
-    if audio is not None:
-        # Set the title and artist/author
-        audio['title'] = yt.title  # or use a custom title
-        audio['artist'] = yt.author  # or use a custom artist
-        audio.save()
+    audio['\xa9nam'] = yt.title  # or use a custom title
+    audio['\xa9ART'] = yt.author  # or use a custom artist
+
+    cover = requests.get(yt.thumbnail_url)
+    cropped_cover = edit_cover(cover.content)
+
+    audio['covr'] = [mp4.MP4Cover(cropped_cover)]
+    audio.save()
 
     return filename
 
