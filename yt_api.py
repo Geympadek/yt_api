@@ -9,6 +9,7 @@ from pytubefix import YouTube, Search
 import os
 from threading import Lock
 import mutagen
+from time import time
 
 app = Flask("yt_api")
 
@@ -26,25 +27,42 @@ def soft_clear():
         except:
             pass
 
-def load_audio(url: str) -> str:
+def load_audio(url: str, max_retries=3, timeout = 7.5) -> str:
     """
     Takes youtube `url` as input and returns the name of downloaded file.
     """
-    yt = YouTube(url)
-
-    ys = yt.streams.get_audio_only()
-
     global song_count
     filename = ""
     with mutex:
         song_count += 1
-        filename = str(song_count) + ".m4a"
-
+    filename = str(song_count) + ".m4a"
+        
     path = os.path.join(TMP_DIR, filename)
+    
+    attempt = 0
+    while True:
+        yt = YouTube(url)
+        ys = yt.streams.get_audio_only()
 
-    ys.download(output_path=TMP_DIR, filename=filename, timeout=5, max_retries=3)
-    if not os.path.exists(path):
-        raise Exception("Unable to fetch the song from yt")
+        start_time = time()
+        interrupted = False
+        def timeout_checker():
+            nonlocal interrupted
+            interrupted = time() - start_time > timeout
+            return interrupted
+
+        ys.download(output_path=TMP_DIR, filename=filename, interrupt_checker=timeout_checker)
+        if interrupted:
+            print("Fetch took too long.")
+            attempt += 1
+            if attempt >= max_retries:
+                raise Exception("Exceeded number of retries.")
+            print(f"Starting {attempt}th retry.")
+            continue
+
+        if not os.path.exists(path):
+            raise Exception("Unable to fetch the song from yt")
+        break
 
     audio: mutagen.easymp4.EasyMP4 = mutagen.File(path, easy=True)
     
